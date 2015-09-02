@@ -55,6 +55,7 @@ define php::ini (
         ensure  => 'present',
         content => template($template),
         require => Package[$package],
+        notify  => Service[$service],
       }
     } else {
       file { "${config_dir}${http_sapi}${confd_dir}${target}":
