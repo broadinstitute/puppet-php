@@ -28,7 +28,7 @@ define php::ini (
   $sapi_target  = 'all',
   $service      = $php::service,
   $config_dir   = $php::config_dir,
-  $package      = $php::package
+  $package      = $php::package,
 ) {
 
   include php
@@ -38,24 +38,41 @@ define php::ini (
     default                                 => '/',
   }
 
+  $confd_dir = $::operatingsystem ? {
+    /(?i:Ubuntu|Debian|Mint|SLES|OpenSuSE)/ => 'conf.d/',
+    default                                 => '',
+  }
+
+  $cli_confd_dir = $::operatingsystem ? {
+    /(?i:Ubuntu|Debian|Mint|SLES|OpenSuSE)/ => 'cli/conf.d/',
+    default                                 => '',
+  }
+
   if ($sapi_target == 'all') {
 
-    file { "${config_dir}${http_sapi}conf.d/${target}":
-      ensure  => 'present',
-      content => template($template),
-      require => Package[$package],
-      before  => File["${config_dir}/cli/conf.d/${target}"],
-    }
+    if $confd_dir == $cli_confd_dir {
+      file { "${config_dir}${http_sapi}${confd_dir}${target}":
+        ensure  => 'present',
+        content => template($template),
+        require => Package[$package],
+      }
+    } else {
+      file { "${config_dir}${http_sapi}${confd_dir}${target}":
+        ensure  => 'present',
+        content => template($template),
+        require => Package[$package],
+        before  => File["${config_dir}${cli_confd_dir}${target}"],
+      }
 
-    file { "${config_dir}/cli/conf.d/${target}":
-      ensure  => 'present',
-      content => template($template),
-      require => Package[$package],
-      notify  => Service[$service],
+      file { "${config_dir}${cli_confd_dir}${target}":
+        ensure  => 'present',
+        content => template($template),
+        require => Package[$package],
+        notify  => Service[$service],
+      }
     }
-
   }else{
-    file { "${config_dir}/${sapi_target}/conf.d/${target}":
+    file { "${config_dir}/${sapi_target}${confd_dir}${target}":
       ensure  => 'present',
       content => template($template),
       require => Package[$package],
